@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { STATUS_OPTIONS } from './config';
 
 const TaskList = () => {
     const [tasks, setTasks] = useState([]);
@@ -7,6 +8,7 @@ const TaskList = () => {
     const [editTitle, setEditTitle] = useState('');
     const [editDescription, setEditDescription] = useState('');
     const [editStatus, setEditStatus] = useState('');
+    const [errors, setErrors] = useState({ title: '', description: '' });
 
     useEffect(() => {
         axios.get('http://localhost:8080/api/tasks')
@@ -27,6 +29,20 @@ const TaskList = () => {
 
     const handleEditSubmit = (e) => {
         e.preventDefault();
+        let validationErrors = {};
+
+        if (!editTitle) {
+            validationErrors.title = 'Title is required';
+        }
+        if (!editDescription) {
+            validationErrors.description = 'Description is required';
+        }
+
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            return;
+        }
+
         axios.put(`http://localhost:8080/api/tasks/${editingTask}`, {
             title: editTitle,
             description: editDescription,
@@ -35,6 +51,7 @@ const TaskList = () => {
             .then(response => {
                 setTasks(tasks.map(task => task.id === editingTask ? response.data : task));
                 setEditingTask(null);
+                setErrors({ title: '', description: '' });
             })
             .catch(error => {
                 console.error("Error editing task: ", error);
@@ -63,20 +80,22 @@ const TaskList = () => {
                             onChange={e => setEditTitle(e.target.value)}
                             placeholder="Enter task title"
                         />
+                        {errors.title && <div className="text-danger mb-2">{errors.title}</div>}
                         <textarea
                             className="form-control mb-2"
                             value={editDescription}
                             onChange={e => setEditDescription(e.target.value)}
                             placeholder="Enter task description"
                         />
+                        {errors.description && <div className="text-danger mb-2">{errors.description}</div>}
                         <select
                             className="form-control mb-2"
                             value={editStatus}
                             onChange={e => setEditStatus(e.target.value)}
                         >
-                            <option value="TO DO">TO DO</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Done">Done</option>
+                            {STATUS_OPTIONS.map(option => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
                         </select>
                         <button type="submit" className="btn btn-primary">Save</button>
                         <button type="button" className="btn btn-secondary" onClick={() => setEditingTask(null)}>Cancel</button>
@@ -98,24 +117,14 @@ const TaskList = () => {
         <div>
             <h2 className="mb-3">Tasks</h2>
             <div className="row">
-                <div className="col">
-                    <h3>TO DO</h3>
-                    <ul className="list-group">
-                        {renderTasks('TO DO')}
-                    </ul>
-                </div>
-                <div className="col">
-                    <h3>In Progress</h3>
-                    <ul className="list-group">
-                        {renderTasks('In Progress')}
-                    </ul>
-                </div>
-                <div className="col">
-                    <h3>Done</h3>
-                    <ul className="list-group">
-                        {renderTasks('Done')}
-                    </ul>
-                </div>
+                {STATUS_OPTIONS.map(status => (
+                    <div className="col" key={status}>
+                        <h3>{status}</h3>
+                        <ul className="list-group">
+                            {renderTasks(status)}
+                        </ul>
+                    </div>
+                ))}
             </div>
         </div>
     );
